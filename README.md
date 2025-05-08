@@ -2,10 +2,10 @@ This project have been developed as part of Software Engineering Course(CS3201) 
 
 We would like to thank our professors Dr. Vijay Rao and Dr. Avinash, our project guide Mrs. Swapna mam, and TA's of the course for constant guidance. 
 
-**Bandwidth Monitoring System**
+#**Bandwidth Monitoring System**
 A lightweight, real-time bandwidth monitoring and alert system built using Python (Flask) and SQLite, with an interactive dashboard and RESTful APIs. It tracks usage by device, application, and interface—ideal for small networks, labs, or home environments.
 
-Key Features
+# Key Features
 
 - **Real-time Monitoring**: Track bandwidth usage with 5-second precision
 - **Device Tracking**: Identify top bandwidth consumers by IP/MAC address
@@ -35,7 +35,7 @@ python models.py
 Running the Application
 python app.py
 
-**Project Structure**
+# Project Structure
 bandwidth-monitor/
 ├── app.py                # Main application
 ├── models.py             # Database schema
