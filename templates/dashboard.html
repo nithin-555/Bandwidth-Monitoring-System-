@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bandwidth Monitoring System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .card-header {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e1e4e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #2c3e50;
+        }
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 15px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        .stat-card:nth-child(2) {
+            border-left-color: #2ecc71;
+        }
+        .stat-card:nth-child(3) {
+            border-left-color: #e74c3c;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            margin: 10px 0;
+            color: #2c3e50;
+        }
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        .tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-right: 5px;
+            font-weight: 500;
+            color: #7f8c8d;
+            transition: all 0.2s;
+        }
+        .tab:hover {
+            color: #3498db;
+        }
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .interface-selector {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .interface-selector label {
+            margin-right: 10px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        select {
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 0.9em;
+            background: white;
+            cursor: pointer;
+        }
+        .last-updated {
+            text-align: right;
+            font-size: 0.8em;
+            color: #95a5a6;
+            margin-top: 10px;
+        }
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .refresh-btn:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+        .no-data {
+            text-align: center;
+            color: #95a5a6;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+        .device-details {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .device-details h4 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 1px solid #e1e4e8;
+            padding-bottom: 8px;
+        }
+        .device-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .device-info p {
+            margin: 5px 0;
+        }
+        .device-info strong {
+            color: #2c3e50;
+        }
+        .app-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .app-chip {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #e1f0fa;
+            border-radius: 16px;
+            font-size: 0.8em;
+            color: #2980b9;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .alert {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .alert.warning {
+            background-color: #fde8e8;
+            border-left-color: #e74c3c;
+        }
+        .alert.resolved {
+            background-color: #e8f5e9;
+            border-left-color: #2ecc71;
+        }
+        .alert-content {
+            flex-grow: 1;
+        }
+        .alert-actions button {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: 10px;
+        }
+        .alert-actions button:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            .card {
+                grid-column: span 1 !important;
+            }
+            .stat-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="card" style="grid-column: span 2;">
+            <div class="card-header">
+                <span>Bandwidth Monitoring Dashboard</span>
+                <button class="refresh-btn" id="refresh-all">
+                    <span>⟳ Refresh All</span>
+                </button>
+            </div>
+            <div class="stat-cards">
+                <div class="stat-card">
+                    <div class="stat-label">Bytes Sent</div>
+                    <div class="stat-value" id="bytes-sent">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Bytes Received</div>
+                    <div class="stat-value" id="bytes-recv">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Usage</div>
+                    <div class="stat-value" id="total-usage">0</div>
+                </div>
+            </div>
+            <div class="last-updated" id="last-updated"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Bandwidth Usage Over Time</div>
+            <div class="tabs">
+                <div class="tab active" data-range="1h">1 Hour</div>
+                <div class="tab" data-range="24h">24 Hours</div>
+                <div class="tab" data-range="7d">7 Days</div>
+            </div>
+            <div class="interface-selector">
+                <label for="interface-select">Network Interface:</label>
+                <select id="interface-select">
+                    <option value="all">All Interfaces</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="usage-chart"></canvas>
+                <div id="usage-no-data" class="no-data" style="display: none;">No data available for selected time range</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Top Devices by Usage</div>
+            <div class="tabs">
+                <div class="tab active" data-range="1h">1 Hour</div>
+                <div class="tab" data-range="24h">24 Hours</div>
+                <div class="tab" data-range="7d">7 Days</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="devices-chart"></canvas>
+                <div id="devices-no-data" class="no-data" style="display: none;">No device data available</div>
+            </div>
+            <div id="device-details-container"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Top Applications</div>
+            <div class="tabs">
+                <div class="tab active" data-range="1h">1 Hour</div>
+                <div class="tab" data-range="24h">24 Hours</div>
+                <div class="tab" data-range="7d">7 Days</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="apps-chart"></canvas>
+                <div id="apps-no-data" class="no-data" style="display: none;">No application data available</div>
+            </div>
+        </div>
+
+        <div class="card" style="grid-column: span 2;">
+            <div class="card-header">Alerts</div>
+            <div class="tabs">
+                <div class="tab active" data-alert-type="active">Active Alerts</div>
+                <div class="tab" data-alert-type="resolved">Resolved Alerts</div>
+            </div>
+            <div id="alerts-container">
+                <div class="alert">Loading alerts...</div>
+            </div>
+        </div>
+
+        <div class="card" style="grid-column: span 2;">
+            <div class="card-header">Daily Usage Report</div>
+            <div id="report-image-container">
+                <div class="no-data">Generating report...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Format bytes to human readable format
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        // Update current usage stats
+        function updateCurrentUsage() {
+            fetch('/api/current_usage')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('bytes-sent').textContent = formatBytes(data.bytes_sent);
+                    document.getElementById('bytes-recv').textContent = formatBytes(data.bytes_recv);
+                    document.getElementById('total-usage').textContent = formatBytes(data.total);
+                    document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                    
+                    // Update interface selector
+                    const interfaceSelect = document.getElementById('interface-select');
+                    const currentInterfaces = Array.from(interfaceSelect.options)
+                        .map(opt => opt.value)
+                        .filter(val => val !== 'all');
+                    
+                    const newInterfaces = Object.keys(data.interfaces);
+                    
+                    // Add new interfaces
+                    newInterfaces.forEach(iface => {
+                        if (!currentInterfaces.includes(iface)) {
+                            const option = document.createElement('option');
+                            option.value = iface;
+                            option.textContent = iface;
+                            interfaceSelect.appendChild(option);
+                        }
+                    });
+                    
+                    // Remove old interfaces
+                    currentInterfaces.forEach(iface => {
+                        if (!newInterfaces.includes(iface)) {
+                            const option = interfaceSelect.querySelector(`option[value="${iface}"]`);
+                            if (option) option.remove();
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching current usage:', error);
+                    document.getElementById('last-updated').textContent = `Error: ${error.message}`;
+                });
+        }
+
+        // Initialize charts
+        const usageCtx = document.getElementById('usage-chart').getContext('2d');
+        const usageChart = new Chart(usageCtx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Bytes Sent',
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        data: []
+                    },
+                    {
+                        label: 'Bytes Received',
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        tension: 0.1,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        data: []
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            tooltipFormat: 'MMM D, h:mm a',
+                            unit: 'hour'
+                        },
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatBytes(value);
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += formatBytes(context.raw);
+                                return label;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        });
+
+        const devicesCtx = document.getElementById('devices-chart').getContext('2d');
+        const devicesChart = new Chart(devicesCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Bytes Sent',
+                        backgroundColor: '#e74c3c',
+                        data: []
+                    },
+                    {
+                        label: 'Bytes Received',
+                        backgroundColor: '#3498db',
+                        data: []
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatBytes(value);
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += formatBytes(context.raw);
+                                return label;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const label = devicesChart.data.labels[index];
+                        showDeviceDetails(label);
+                    }
+                }
+            }
+        });
+
+        const appsCtx = document.getElementById('apps-chart').getContext('2d');
+        const appsChart = new Chart(appsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
+                        '#1abc9c', '#d35400', '#34495e', '#16a085', '#c0392b'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${formatBytes(value)} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update charts with data
+        function updateCharts() {
+            const timeRange = document.querySelectorAll('.tabs .tab.active')[0].dataset.range;
+            const interface = document.getElementById('interface-select').value;
+            
+            // Update usage chart
+            fetch(`/api/historical?range=${timeRange}&interface=${interface}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.times.length === 0) {
+                        document.getElementById('usage-no-data').style.display = 'block';
+                        return;
+                    }
+                    
+                    document.getElementById('usage-no-data').style.display = 'none';
+                    usageChart.data.datasets[0].data = data.times.map((time, i) => ({x: time, y: data.sent[i]}));
+                    usageChart.data.datasets[1].data = data.times.map((time, i) => ({x: time, y: data.received[i]}));
+                    
+                    if (timeRange === '1h') {
+                        usageChart.options.scales.x.time.unit = 'minute';
+                    } else if (timeRange === '24h') {
+                        usageChart.options.scales.x.time.unit = 'hour';
+                    } else {
+                        usageChart.options.scales.x.time.unit = 'day';
+                    }
+                    
+                    usageChart.update();
+                })
+                .catch(error => {
+                    console.error('Error fetching historical data:', error);
+                    document.getElementById('usage-no-data').style.display = 'block';
+                    document.getElementById('usage-no-data').textContent = 'Error loading data';
+                });
+        }
+
+        function updateDeviceAppCharts() {
+            const timeRange = document.querySelectorAll('.tabs .tab.active')[1].dataset.range;
+            
+            // Update devices chart
+            fetch(`/api/device_usage?range=${timeRange}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(devices => {
+                    if (devices.length === 0) {
+                        document.getElementById('devices-no-data').style.display = 'block';
+                        document.getElementById('device-details-container').innerHTML = '';
+                        return;
+                    }
+                    
+                    document.getElementById('devices-no-data').style.display = 'none';
+                    devicesChart.data.labels = devices.map(d => d.ip_address);
+                    devicesChart.data.datasets[0].data = devices.map(d => d.sent);
+                    devicesChart.data.datasets[1].data = devices.map(d => d.received);
+                    devicesChart.update();
+                    
+                    // Show details for first device by default
+                    if (devices.length > 0) {
+                        showDeviceDetails(devices[0].ip_address);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching device usage:', error);
+                    document.getElementById('devices-no-data').style.display = 'block';
+                    document.getElementById('devices-no-data').textContent = 'Error loading data';
+                });
+            
+            // Update apps chart
+            fetch(`/api/application_usage?range=${timeRange}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(apps => {
+                    if (apps.length === 0) {
+                        document.getElementById('apps-no-data').style.display = 'block';
+                        return;
+                    }
+                    
+                    document.getElementById('apps-no-data').style.display = 'none';
+                    appsChart.data.labels = apps.map(a => a.application_name);
+                    appsChart.data.datasets[0].data = apps.map(a => a.sent + a.received);
+                    appsChart.update();
+                })
+                .catch(error => {
+                    console.error('Error fetching application usage:', error);
+                    document.getElementById('apps-no-data').style.display = 'block';
+                    document.getElementById('apps-no-data').textContent = 'Error loading data';
+                });
+        }
+
+        function showDeviceDetails(ip) {
+            const timeRange = document.querySelectorAll('.tabs .tab.active')[1].dataset.range;
+            
+            fetch(`/api/device_details/${ip}?range=${timeRange}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(device => {
+                    const container = document.getElementById('device-details-container');
+                    
+                    let html = `
+                        <div class="device-details">
+                            <h4>Device Details: ${device.ip_address}</h4>
+                            <div class="device-info">
+                                <div>
+                                    <p><strong>MAC Address:</strong> ${device.mac_address}</p>
+                                    <p><strong>Total Sent:</strong> ${formatBytes(device.sent)}</p>
+                                </div>
+                                <div>
+                                    <p><strong>First Seen:</strong> Loading...</p>
+                                    <p><strong>Total Received:</strong> ${formatBytes(device.received)}</p>
+                                </div>
+                            </div>
+                            <h5>Top Applications:</h5>
+                            <div class="app-chips">
+                    `;
+                    
+                    device.applications.forEach(app => {
+                        html += `<span class="app-chip">${app.application} (${formatBytes(app.total_bytes)})</span>`;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error fetching device details:', error);
+                    document.getElementById('device-details-container').innerHTML = `
+                        <div class="device-details">
+                            <p>Error loading device details</p>
+                        </div>
+                    `;
+                });
+        }
+
+        function updateAlerts() {
+            const alertType = document.querySelector('.card-header ~ .tabs .tab.active').dataset.alertType;
+            const resolved = alertType === 'resolved';
+            
+            fetch(`/api/alerts?resolved=${resolved}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(alerts => {
+                    const container = document.getElementById('alerts-container');
+                    container.innerHTML = '';
+                    
+                    if (alerts.length === 0) {
+                        const noAlerts = document.createElement('div');
+                        noAlerts.className = 'alert';
+                        noAlerts.textContent = resolved 
+                            ? 'No resolved alerts' 
+                            : 'No active alerts';
+                        container.appendChild(noAlerts);
+                        return;
+                    }
+                    
+                    alerts.forEach(alert => {
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = `alert ${resolved ? 'resolved' : 'warning'}`;
+                        
+                        const alertContent = document.createElement('div');
+                        alertContent.className = 'alert-content';
+                        alertContent.innerHTML = `
+                            <strong>${new Date(alert.timestamp).toLocaleString()}</strong><br>
+                            ${alert.message}<br>
+                            <small>Threshold: ${formatBytes(alert.threshold)}, Actual: ${formatBytes(alert.actual_value)}</small>
+                        `;
+                        
+                        const alertActions = document.createElement('div');
+                        alertActions.className = 'alert-actions';
+                        
+                        if (!resolved) {
+                            const resolveBtn = document.createElement('button');
+                            resolveBtn.textContent = 'Mark Resolved';
+                            resolveBtn.onclick = () => {
+                                fetch(`/api/resolve_alert/${alert.id}`, { method: 'POST' })
+                                    .then(() => updateAlerts())
+                                    .catch(error => {
+                                        console.error('Error resolving alert:', error);
+                                        alert('Failed to resolve alert');
+                                    });
+                            };
+                            alertActions.appendChild(resolveBtn);
+                        }
+                        
+                        alertDiv.appendChild(alertContent);
+                        alertDiv.appendChild(alertActions);
+                        container.appendChild(alertDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching alerts:', error);
+                    const container = document.getElementById('alerts-container');
+                    container.innerHTML = `<div class="alert warning">Error loading alerts: ${error.message}</div>`;
+                });
+        }
+
+        function updateReport() {
+            fetch('/api/usage_report')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    const container = document.getElementById('report-image-container');
+                    
+                    if (data.error) {
+                        container.innerHTML = `<div class="no-data">${data.error}</div>`;
+                        return;
+                    }
+                    
+                    const img = document.createElement('img');
+                    img.src = `data:image/png;base64,${data.image}`;
+                    img.style.maxWidth = '100%';
+                    img.alt = 'Bandwidth usage report';
+                    img.style.borderRadius = '4px';
+                    img.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                    
+                    container.innerHTML = '';
+                    container.appendChild(img);
+                })
+                .catch(error => {
+                    console.error('Error fetching report:', error);
+                    document.getElementById('report-image-container').innerHTML = 
+                        `<div class="no-data">Error generating report: ${error.message}</div>`;
+                });
+        }
+
+        // Tab click handlers
+        document.querySelectorAll('.tabs .tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const parent = this.parentElement;
+                const tabType = parent.previousElementSibling.textContent;
+                
+                parent.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                if (tabType === 'Bandwidth Usage Over Time') {
+                    updateCharts();
+                } else if (tabType === 'Top Devices by Usage') {
+                    updateDeviceAppCharts();
+                } else if (tabType === 'Top Applications') {
+                    updateDeviceAppCharts();
+                } else if (tabType === 'Alerts') {
+                    updateAlerts();
+                }
+            });
+        });
+
+        // Interface selector change handler
+        document.getElementById('interface-select').addEventListener('change', updateCharts);
+
+        // Refresh all button
+        document.getElementById('refresh-all').addEventListener('click', function() {
+            updateCurrentUsage();
+            updateCharts();
+            updateDeviceAppCharts();
+            updateAlerts();
+            updateReport();
+        });
+
+        // Initial load and periodic updates
+        updateCurrentUsage();
+        updateCharts();
+        updateDeviceAppCharts();
+        updateAlerts();
+        updateReport();
+        
+        setInterval(updateCurrentUsage, 2000);
+        setInterval(updateCharts, 30000);
+        setInterval(updateDeviceAppCharts, 30000);
+        setInterval(updateAlerts, 60000);
+        setInterval(updateReport, 300000);
+    </script>
+</body>
+</html>
