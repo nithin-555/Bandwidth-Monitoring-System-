@@ -26,13 +26,13 @@ A lightweight, real-time bandwidth monitoring and alert system built using Pytho
 | Reporting          | Matplotlib      |
 
 # Install dependencies
-```bash pip install -r requirements.txt
+```bash pip install -r requirements.txt```
 
 # Initialize database
-```bash python models.py
+```bash python models.py```
 
 # Development mode (Running the Application)
-```bash python app.py
+```bash python app.py```
 
 # Project Structure
 ```bash
@@ -43,8 +43,9 @@ bandwidth-monitor/
 ├── templates/            # HTML templates
 │   └── dashboard.html    # Main dashboard
 └── bandwidth.db          # Database file (auto-generated)
+```
 
-# Team 21
+# Team 21 
 V. Nithin Reddy SE22UCSE278
 M. Panvi Tej SE22UCSE194
 N. Kushwanth Reddy SE22UCSE177
